@@ -1,0 +1,24 @@
+#!/bin/zsh
+# Builds Stoplight.app. `./build.sh install` also copies it to ~/Applications and launches it.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+APP=build/Stoplight.app
+rm -rf "$APP"
+mkdir -p "$APP/Contents/MacOS"
+cp Info.plist "$APP/Contents/Info.plist"
+# Universal so the same download runs on Apple silicon and Intel Macs.
+clang -O2 -fobjc-arc -Wall -mmacosx-version-min=14.0 -arch arm64 -arch x86_64 \
+  -framework Cocoa -framework QuartzCore -framework ServiceManagement \
+  Stoplight.m -o "$APP/Contents/MacOS/Stoplight"
+codesign --force --sign - "$APP"
+echo "Built $APP"
+
+if [[ "${1:-}" == "install" ]]; then
+  pkill -x Stoplight || true
+  mkdir -p ~/Applications
+  rm -rf ~/Applications/Stoplight.app
+  cp -R "$APP" ~/Applications/
+  open ~/Applications/Stoplight.app
+  echo "Installed and launched ~/Applications/Stoplight.app"
+fi
